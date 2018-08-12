@@ -4,18 +4,26 @@ import (
 	"bufio"
 	"flag"
 	"fmt"
+	"io"
 	"log"
 	"net/http"
 	"os"
+	"os/exec"
 
 	"google.golang.org/api/googleapi/transport"
 	"google.golang.org/api/youtube/v3"
 )
 
 var songUrls []string
-var maxResults = flag.Int64("max-results", 25, "Max YouTube results")
+var i int
+var maxResults = flag.Int64("max-results", 25, "Youtube results")
 
 const developerKey = "AIzaSyDs-JNazrMlfMle0u4LSOXidEbFJZ45u7s"
+
+type streamBuffer struct {
+	stream io.ReadCloser
+	url    string
+}
 
 func retURL() {
 	reader := bufio.NewReader(os.Stdin)
@@ -41,30 +49,18 @@ func retURL() {
 
 	// Group video, channel, and playlist results in separate lists.
 	videos := make(map[string]string)
-	channels := make(map[string]string)
-	playlists := make(map[string]string)
 
 	// Iterate through each item and add it to the correct list.
 	for _, item := range response.Items {
 		switch item.Id.Kind {
 		case "youtube#video":
 			videos[item.Id.VideoId] = item.Snippet.Title
-		case "youtube#channel":
-			channels[item.Id.ChannelId] = item.Snippet.Title
-		case "youtube#playlist":
-			playlists[item.Id.PlaylistId] = item.Snippet.Title
 		}
 	}
 
 	returnIDs("Search result:\n", videos)
-	//printIDs("Channels", channels)Max
-	//printIDs("Playlists", playlists)
 }
 
-// Print the ID and title of each result in a list as well as a name that
-// identifies the list. For example, print the word section name "Videos"
-// above a list of video search results, followed by the video ID and title
-// of each matching video.
 func returnIDs(sectionName string, matches map[string]string) {
 	fmt.Printf("%v\n", sectionName)
 
@@ -80,12 +76,58 @@ func getURL(id string) string {
 	return url
 }
 
-func main() {
-	//fmt.Scan(&querty)
-	//fmt.Println(querty)
-	retURL()
-	var i int
-	fmt.Scan(&i)
-	fmt.Println("\n", songUrls[i-1])
+func newStreamBuffer(stream io.ReadCloser, url string) *streamBuffer {
+	return &streamBuffer{stream, url}
+}
 
+// Read input URLS from stdin.
+func reader(c chan<- string) {
+	defer close(c)
+	stdin := bufio.NewScanner(os.Stdin)
+	for stdin.Scan() {
+		video := songUrls[i-1]
+		c <- video
+	}
+	if err := stdin.Err(); err != nil {
+		log.Print(err)
+	}
+}
+
+// Buffer video streams for input URLs.
+func bufferer(in <-chan string, out chan<- *streamBuffer) {
+	defer close(out)
+	for video := range in {
+		cmd := exec.Command("youtube-dl", "-q", "-o", "-", video)
+		stream, err := cmd.StdoutPipe()
+		if err != nil {
+			log.Print(err)
+			break
+		}
+		fmt.Printf("Buffering %s\n", video)
+		cmd.Start()
+		out <- newStreamBuffer(stream, video)
+	}
+}
+
+// Play buffered streams one by one as they come in.
+func player(streams <-chan *streamBuffer) {
+	for stream := range streams {
+		cmd := exec.Command("mpv", "--no-terminal", "--no-video", "-")
+		cmd.Stdin = stream.stream
+		fmt.Printf("Playing %s\n", stream.url)
+		cmd.Run()
+		return
+	}
+}
+
+func main() {
+	retURL()
+	fmt.Scan(&i)
+
+	videos := make(chan string)
+	streams := make(chan *streamBuffer)
+
+	go reader(videos)
+	go bufferer(videos, streams)
+	player(streams)
 }
