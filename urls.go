@@ -1,10 +1,12 @@
 package main
 
 import (
+	"bufio"
 	"flag"
 	"fmt"
 	"log"
 	"net/http"
+	"os"
 
 	"google.golang.org/api/googleapi/transport"
 	"google.golang.org/api/youtube/v3"
@@ -16,8 +18,8 @@ var maxResults = flag.Int64("max-results", 25, "Max YouTube results")
 const developerKey = "AIzaSyDs-JNazrMlfMle0u4LSOXidEbFJZ45u7s"
 
 func retURL() {
-	var query string
-	fmt.Scan(&query)
+	reader := bufio.NewReader(os.Stdin)
+	query, _ := reader.ReadString('\n')
 	flag.Parse()
 	client := &http.Client{
 		Transport: &transport.APIKey{Key: developerKey},
@@ -54,9 +56,8 @@ func retURL() {
 		}
 	}
 
-	returnIDs("Videos", videos)
-	search()
-	//printIDs("Channels", channels)
+	returnIDs("Search result:\n", videos)
+	//printIDs("Channels", channels)Max
 	//printIDs("Playlists", playlists)
 }
 
@@ -65,13 +66,13 @@ func retURL() {
 // above a list of video search results, followed by the video ID and title
 // of each matching video.
 func returnIDs(sectionName string, matches map[string]string) {
-	fmt.Printf("%v:\n", sectionName)
+	fmt.Printf("%v\n", sectionName)
 
 	for id, title := range matches {
 		songUrls = append(songUrls, getURL(id))
-		fmt.Printf("[%v] %v\n", id, title)
+		fmt.Printf(" %v \n", title)
 	}
-	//fmt.Printf("\n\n")
+	fmt.Printf("\n")
 }
 
 func getURL(id string) string {
@@ -83,11 +84,8 @@ func main() {
 	//fmt.Scan(&querty)
 	//fmt.Println(querty)
 	retURL()
+	var i int
+	fmt.Scan(&i)
+	fmt.Println("\n", songUrls[i-1])
 
-}
-
-func search() {
-	//fmt.Scan(querty)
-	//fmt.Println(*querty)
-	return
 }
