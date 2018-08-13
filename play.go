@@ -16,7 +16,7 @@ import (
 
 var songUrls []string
 var i int
-var maxResults = flag.Int64("max-results", 25, "Youtube results")
+var maxResults = flag.Int64("max-results", 19, "Youtube results")
 
 const developerKey = "AIzaSyDs-JNazrMlfMle0u4LSOXidEbFJZ45u7s"
 
