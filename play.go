@@ -18,7 +18,7 @@ var songUrls []string
 var i int
 var maxResults = flag.Int64("max-results", 19, "Youtube results")
 
-const developerKey = "AIzaSyDs-JNazrMlfMle0u4LSOXidEbFJZ45u7s"
+const developerKey = "Your dev-API here"
 
 type streamBuffer struct {
 	stream io.ReadCloser
