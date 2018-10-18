@@ -1,1 +1,2 @@
-This is readme file.
+# Go-Play
+A terminal client that searches youtube for song requested song 
